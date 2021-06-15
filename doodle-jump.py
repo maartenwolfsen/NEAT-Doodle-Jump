@@ -29,6 +29,7 @@ class Player:
         self.velocity_y = 0
         self.height = self.y
         self.jump_tick = 0
+        self.has_jumped = false
 
     def moveLeft(self):
         self.velocity_x = -self.VELOCITY_X
@@ -40,9 +41,10 @@ class Player:
         self.velocity_x = 0
 
     def jump(self):
-        self.velocity_y = -self.VELOCITY_Y
-        self.jump_tick = 0
-        self.height = self.y
+        if not has_jumped:
+            self.velocity_y = -self.VELOCITY_Y
+            self.jump_tick = 0
+            self.height = self.y
 
     def move(self):
         self.jump_tick += 1
