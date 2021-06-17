@@ -17,7 +17,6 @@ PLAYER_SPRITE_RIGHT = pygame.image.load(os.path.join("sprites", "player.png"))
 PLAYER_SPRITE_LEFT = pygame.transform.flip(PLAYER_SPRITE_RIGHT, True, False)
 PLATFORM_SPRITE = pygame.image.load(os.path.join("sprites", "platform.png"))
 BG_SPRITE = pygame.image.load(os.path.join("sprites", "bg.png"))
-
 SCORE_FONT = pygame.font.SysFont("Verdana", 36)
 DEBUG_FONT = pygame.font.SysFont("Verdana", 14)
 
@@ -26,7 +25,7 @@ class Player:
     VELOCITY_Y = 10
     JUMP_VELOCITY = 0.4
     MAX_VELOCITY_Y = 10
-    JUMP_POWER = 1.5
+    JUMP_POWER = 0.08
 
     def __init__(self, x, y):
         self.x = x
@@ -59,7 +58,7 @@ class Player:
     def move(self):
         self.jump_tick += self.JUMP_VELOCITY
 
-        vy = self.velocity_y * self.jump_tick + self.JUMP_POWER * self.jump_tick ** 2
+        vy = self.velocity_y + self.JUMP_POWER * self.jump_tick ** 2
 
         if vy >= self.MAX_VELOCITY_Y:
             vy = self.MAX_VELOCITY_Y
