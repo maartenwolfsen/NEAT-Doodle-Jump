@@ -9,7 +9,9 @@ pygame.font.init()
 WINDOW_WIDTH = 480
 WINDOW_HEIGHT = 800
 FIELD_MARGIN = 5
+COLLISION_MARGIN = 10
 JUMP_THRESHOLD = 210
+DEBUG_MODE = True
 
 PLAYER_SPRITE_RIGHT = pygame.image.load(os.path.join("sprites", "player.png"))
 PLAYER_SPRITE_LEFT = pygame.transform.flip(PLAYER_SPRITE_RIGHT, True, False)
@@ -17,6 +19,7 @@ PLATFORM_SPRITE = pygame.image.load(os.path.join("sprites", "platform.png"))
 BG_SPRITE = pygame.image.load(os.path.join("sprites", "bg.png"))
 
 SCORE_FONT = pygame.font.SysFont("Verdana", 36)
+DEBUG_FONT = pygame.font.SysFont("Verdana", 14)
 
 class Player:
     VELOCITY_X = 4
@@ -30,11 +33,12 @@ class Player:
         self.y = y
         self.velocity_x = 0
         self.velocity_y = 0
-        self.height = self.y
+        self.image = PLAYER_SPRITE_RIGHT
+        self.height = self.image.get_height()
+        self.width = self.image.get_width()
         self.jump_tick = 0
         self.has_jumped = False
         self.vy = 0
-        self.image = PLAYER_SPRITE_RIGHT
 
     def moveLeft(self):
         self.velocity_x = -self.VELOCITY_X
@@ -51,7 +55,6 @@ class Player:
         if not self.has_jumped:
             self.velocity_y = -self.VELOCITY_Y
             self.jump_tick = 0
-            self.height = self.y
 
     def move(self):
         self.jump_tick += self.JUMP_VELOCITY
@@ -71,8 +74,31 @@ class Player:
     def draw(self, win):
         win.blit(self.image, (self.x, self.y))
 
-    def get_mask(self):
-        return pygame.mask.from_surface(self.image)
+        if DEBUG_MODE:
+            win.blit(
+                DEBUG_FONT.render(
+                    "Y: " + str(round(self.y)) + "; X: " + str(round(self.x)),
+                    1,
+                    (0, 0, 0)
+                ),
+                (self.x, self.y)
+            )
+
+            surface = pygame.Surface((self.width, COLLISION_MARGIN))
+            surface.set_alpha(128)
+            surface.fill((0, 35, 255))
+            win.blit(surface, (self.x, self.y + self.height))
+
+    def collide(self, platforms):
+        player_rect = pygame.Rect(self.x, self.y + self.height, self.width, COLLISION_MARGIN)
+
+        for platform in platforms:
+            platform_rect = pygame.Rect(platform.x, platform.y, platform.width, platform.height)
+
+            if player_rect.colliderect(platform_rect):
+                return True
+
+        return False
 
 class Platform:
     VELOCITY = 5
@@ -97,21 +123,25 @@ class Platform:
     def draw(self, win):
         win.blit(PLATFORM_SPRITE, (self.x, self.y))
 
-    def collide(self, player):
-        player_mask = player.get_mask()
-        platform_mask = pygame.mask.from_surface(PLATFORM_SPRITE)
+        if DEBUG_MODE:
+            win.blit(
+                DEBUG_FONT.render(
+                    "Y: " + str(round(self.y)) + "; X: " + str(round(self.x)),
+                    1,
+                    (0, 0, 0)
+                ),
+                (self.x, self.y)
+            )
 
-        offset = (self.x - player.x, self.y - round(player.y))
-        point = player_mask.overlap(platform_mask, offset)
-
-        return bool(point)
+            surface = pygame.Surface((self.width, self.height))
+            surface.set_alpha(128)
+            surface.fill((255, 0, 25))
+            win.blit(surface, (self.x, self.y))
 
 def draw_window(win, player, platforms, score):
     win.blit(BG_SPRITE, (0, 0))
-
-    scoreText = SCORE_FONT.render(str(score), 1, (0, 0, 0))
     win.blit(
-        scoreText,
+        SCORE_FONT.render(str(score), 1, (0, 0, 0)),
         (10, 10)
     )
 
@@ -159,6 +189,7 @@ def main():
     while run:
         clock.tick(60)
 
+        # Quit Game
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -173,6 +204,7 @@ def main():
         else:
             player.resetStrafe()
 
+        # Update Platforms
         for platform in platforms:
             if platform.y > WINDOW_HEIGHT:
                 platforms.remove(platform)
@@ -184,11 +216,7 @@ def main():
                     -50
                 ))
 
-            if platform.collide(player):
-                player.jump()
-
-        player.move();
-
+        # Move Platforms if Player Y is above Jump Threshold
         if player.y <= JUMP_THRESHOLD:
             player.y = JUMP_THRESHOLD
 
@@ -196,6 +224,12 @@ def main():
                 current_height = -round(player.vy)
                 score = score + current_height
                 platform.move(current_height)
+
+
+        if player.collide(platforms):
+            player.jump()
+
+        player.move();
 
         if player.y >= WINDOW_HEIGHT:
             score = "GAME OVER"
