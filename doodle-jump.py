@@ -16,6 +16,8 @@ DEBUG_MODE = True
 
 PLAYER_SPRITE_RIGHT = pygame.image.load(os.path.join("sprites", "player.png"))
 PLAYER_SPRITE_LEFT = pygame.transform.flip(PLAYER_SPRITE_RIGHT, True, False)
+PLAYER_JUMP_SPRITE_RIGHT = pygame.image.load(os.path.join("sprites", "player_jump.png"))
+PLAYER_JUMP_SPRITE_LEFT = pygame.transform.flip(PLAYER_JUMP_SPRITE_RIGHT, True, False)
 PLATFORM_SPRITE = pygame.image.load(os.path.join("sprites", "platform.png"))
 BG_SPRITE = pygame.image.load(os.path.join("sprites", "bg.png"))
 SCORE_FONT = pygame.font.SysFont("Verdana", 36)
@@ -37,24 +39,21 @@ class Player:
         self.height = self.image.get_height()
         self.width = self.image.get_width()
         self.jump_tick = 0
-        self.has_jumped = False
+        self.jump_animation_timer = 30
         self.vy = 0
 
     def moveLeft(self):
         self.velocity_x = -self.VELOCITY_X
-        self.image = PLAYER_SPRITE_LEFT
 
     def moveRight(self):
         self.velocity_x = self.VELOCITY_X
-        self.image = PLAYER_SPRITE_RIGHT
 
     def resetStrafe(self):
         self.velocity_x = 0
 
     def jump(self):
-        if not self.has_jumped:
-            self.velocity_y = -self.VELOCITY_Y
-            self.jump_tick = 0
+        self.velocity_y = -self.VELOCITY_Y
+        self.jump_tick = 0
 
     def move(self):
         self.jump_tick += self.JUMP_VELOCITY
@@ -70,6 +69,18 @@ class Player:
         self.vy = vy
         self.y = self.y + vy
         self.x = self.x + self.velocity_x
+
+        print(self.jump_tick)
+        if self.jump_tick < 7:
+            if self.velocity_x >= 0:
+                self.image = PLAYER_JUMP_SPRITE_RIGHT
+            else:
+                self.image = PLAYER_JUMP_SPRITE_LEFT
+        else:
+            if self.velocity_x >= 0:
+                self.image = PLAYER_SPRITE_RIGHT
+            else:
+                self.image = PLAYER_SPRITE_LEFT
 
     def draw(self, win):
         win.blit(self.image, (self.x, self.y))
