@@ -90,10 +90,20 @@ class Player:
             win.blit(surface, (self.x + (self.width / 4), self.y + self.height))
 
     def collide(self, platforms):
-        player_rect = pygame.Rect(self.x + (self.width / 4), self.y + self.height, self.width / 2, COLLISION_MARGIN)
+        player_rect = pygame.Rect(
+            self.x + (self.width / 4),
+            self.y + self.height,
+            self.width / 2,
+            COLLISION_MARGIN
+        )
 
         for platform in platforms:
-            platform_rect = pygame.Rect(platform.x, platform.y, platform.width, platform.height)
+            platform_rect = pygame.Rect(
+                platform.x,
+                platform.y,
+                platform.width,
+                platform.height
+            )
 
             if player_rect.colliderect(platform_rect):
                 return True
@@ -182,11 +192,8 @@ def main():
     player = Player(200, 200)
     platforms = generateInitialPlatforms()
     current_height = 0
-
     run = True
     score = 0
-
-    generateInitialPlatforms()
 
     while run:
         clock.tick(60)
@@ -226,7 +233,6 @@ def main():
                 current_height = -round(player.vy)
                 score = score + current_height
                 platform.move(current_height)
-
 
         if player.collide(platforms):
             player.jump()
