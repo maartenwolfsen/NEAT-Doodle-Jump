@@ -84,13 +84,13 @@ class Player:
                 (self.x, self.y)
             )
 
-            surface = pygame.Surface((self.width, COLLISION_MARGIN))
+            surface = pygame.Surface((self.width / 2, COLLISION_MARGIN))
             surface.set_alpha(128)
             surface.fill((0, 35, 255))
-            win.blit(surface, (self.x, self.y + self.height))
+            win.blit(surface, (self.x + (self.width / 4), self.y + self.height))
 
     def collide(self, platforms):
-        player_rect = pygame.Rect(self.x, self.y + self.height, self.width, COLLISION_MARGIN)
+        player_rect = pygame.Rect(self.x + (self.width / 4), self.y + self.height, self.width / 2, COLLISION_MARGIN)
 
         for platform in platforms:
             platform_rect = pygame.Rect(platform.x, platform.y, platform.width, platform.height)
