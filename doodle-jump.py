@@ -10,6 +10,7 @@ WINDOW_WIDTH = 480
 WINDOW_HEIGHT = 800
 FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
+MAX_GAP = 250
 JUMP_THRESHOLD = 210
 DEBUG_MODE = True
 
@@ -139,51 +140,53 @@ class Platform:
 
 def draw_window(win, player, platforms, score):
     win.blit(BG_SPRITE, (0, 0))
+
+    for platform in platforms:
+        platform.draw(win)
+
     win.blit(
         SCORE_FONT.render(str(score), 1, (0, 0, 0)),
         (10, 10)
     )
 
-    for platform in platforms:
-        platform.draw(win)
-
     player.draw(win)
 
     pygame.display.update()
+
+def generateInitialPlatforms():
+    prev_y = 0
+    platforms = []
+
+    for i in range(7):
+        x = random.randrange(
+            FIELD_MARGIN,
+            WINDOW_WIDTH - PLATFORM_SPRITE.get_width() - FIELD_MARGIN
+        )
+        min = prev_y + FIELD_MARGIN
+        y = random.randrange(
+            min,
+            min + MAX_GAP
+        )
+        prev_y = y
+
+        platforms.append(Platform(
+            x,
+            y
+        ))
+
+    return platforms
 
 def main():
     win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     clock = pygame.time.Clock()
     player = Player(200, 200)
-    platforms = []
-    max_platforms = 7
+    platforms = generateInitialPlatforms()
     current_height = 0
 
     run = True
     score = 0
 
-    # Generate Platforms
-    for i in range(max_platforms):
-        platform_x = random.randrange(
-            FIELD_MARGIN,
-            WINDOW_WIDTH - PLATFORM_SPRITE.get_width() - FIELD_MARGIN
-        )
-        platform_y = random.randrange(
-            FIELD_MARGIN,
-            WINDOW_HEIGHT - PLATFORM_SPRITE.get_height() - FIELD_MARGIN
-        )
-
-        for platform in platforms:
-            while platform_y >= platform.y and platform_y <= platform.y + platform.height:
-                platform_y = random.randrange(
-                    FIELD_MARGIN,
-                    WINDOW_HEIGHT - PLATFORM_SPRITE.get_height() - FIELD_MARGIN
-                )
-
-        platforms.append(Platform(
-            platform_x,
-            platform_y
-        ))
+    generateInitialPlatforms()
 
     while run:
         clock.tick(60)
@@ -212,7 +215,7 @@ def main():
                         FIELD_MARGIN,
                         WINDOW_WIDTH - PLATFORM_SPRITE.get_width() - FIELD_MARGIN
                     ),
-                    -50
+                    0
                 ))
 
         # Move Platforms if Player Y is above Jump Threshold
