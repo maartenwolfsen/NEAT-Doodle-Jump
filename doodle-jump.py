@@ -1,4 +1,5 @@
 import pygame
+import neat
 import time
 import os
 import random
@@ -10,9 +11,12 @@ WINDOW_WIDTH = 480
 WINDOW_HEIGHT = 800
 FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
-MAX_GAP = 200
+MAX_GAP = 300
 JUMP_THRESHOLD = 210
-DEBUG_MODE = True
+DEBUG_MODE = False
+MAX_GENERATIONS = 500
+MAX_PLATFORMS = 7
+MAX_WHILE = 30
 
 PLAYER_SPRITE_RIGHT = pygame.image.load(os.path.join("sprites", "player.png"))
 PLAYER_SPRITE_LEFT = pygame.transform.flip(PLAYER_SPRITE_RIGHT, True, False)
@@ -48,7 +52,7 @@ class Player:
     def moveRight(self):
         self.velocity_x = self.VELOCITY_X
 
-    def resetStrafe(self):
+    def resetMove(self):
         self.velocity_x = 0
 
     def jump(self):
@@ -70,7 +74,6 @@ class Player:
         self.y = self.y + vy
         self.x = self.x + self.velocity_x
 
-        print(self.jump_tick)
         if self.jump_tick < 7:
             if self.velocity_x >= 0:
                 self.image = PLAYER_JUMP_SPRITE_RIGHT
@@ -81,6 +84,12 @@ class Player:
                 self.image = PLAYER_SPRITE_RIGHT
             else:
                 self.image = PLAYER_SPRITE_LEFT
+
+        if self.x < 0 - (self.width / 2):
+            self.x = WINDOW_WIDTH
+
+        if self.x > WINDOW_WIDTH - (self.width / 2):
+            self.x = 0 - (self.width / 2)
 
     def draw(self, win):
         win.blit(self.image, (self.x, self.y))
@@ -159,7 +168,7 @@ class Platform:
             surface.fill((255, 0, 25))
             win.blit(surface, (self.x, self.y))
 
-def draw_window(win, player, platforms, score):
+def draw_window(win, players, platforms, score):
     win.blit(BG_SPRITE, (0, 0))
 
     for platform in platforms:
@@ -170,7 +179,8 @@ def draw_window(win, player, platforms, score):
         (10, 10)
     )
 
-    player.draw(win)
+    for player in players:
+        player.draw(win)
 
     pygame.display.update()
 
@@ -178,33 +188,53 @@ def generateInitialPlatforms():
     prev_y = 0
     platforms = []
 
-    for i in range(7):
+    for i in range(MAX_PLATFORMS):
         x = random.randrange(
             FIELD_MARGIN,
             WINDOW_WIDTH - PLATFORM_SPRITE.get_width() - FIELD_MARGIN
         )
         min = prev_y + FIELD_MARGIN
-        y = random.randrange(
-            min,
-            min + MAX_GAP
-        )
+        y = 0
+        i = 0
+
+        while y < min or y > WINDOW_HEIGHT:
+            i += 1
+
+            if i < MAX_WHILE:
+                y = random.randrange(
+                    min,
+                    min + MAX_GAP
+                )
+            else:
+                y = WINDOW_HEIGHT - FIELD_MARGIN
+                break
+
         prev_y = y
 
-        platforms.append(Platform(
-            x,
-            y
-        ))
+        platforms.append(Platform(x, y))
 
     return platforms
 
-def main():
+def main(genomes, config):
+    networks = []
+    ge = []
+    players = []
+
+    for _, g in genomes:
+        network = neat.nn.FeedForwardNetwork.create(g, config)
+        networks.append(network)
+        players.append(Player(200, 200))
+        g.fitness = 0
+        ge.append(g)
+
     win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     clock = pygame.time.Clock()
-    player = Player(200, 200)
     platforms = generateInitialPlatforms()
     current_height = 0
     run = True
     score = 0
+    old_score = 0
+    passive_counter = 0
 
     while run:
         clock.tick(60)
@@ -216,15 +246,13 @@ def main():
                 pygame.quit()
                 quit()
 
-        # TODO: Leave controls to Neural Network
-        if keyboard.is_pressed("a"):
-            player.moveLeft()
-        elif keyboard.is_pressed("d"):
-            player.moveRight()
-        else:
-            player.resetStrafe()
+        if len(players) <= 0:
+            run = False
+            break
 
-        # Update Platforms
+        platform_data = []
+
+        # Refresh Platforms
         for platform in platforms:
             if platform.y > WINDOW_HEIGHT:
                 platforms.remove(platform)
@@ -236,23 +264,81 @@ def main():
                     0
                 ))
 
-        # Move Platforms if Player Y is above Jump Threshold
-        if player.y <= JUMP_THRESHOLD:
-            player.y = JUMP_THRESHOLD
+            platform_data.append(platform.x)
+            platform_data.append(platform.y)
 
-            for platform in platforms:
-                current_height = -round(player.vy)
-                score = score + current_height
-                platform.move(current_height)
+        for index, player in enumerate(players):
+            player_data = []
 
-        if player.collide(platforms):
-            player.jump()
+            player.move()
+            player_data.append(player.x)
+            player_data.append(player.y)
 
-        player.move();
+            output = networks[index].activate(platform_data + player_data)
 
-        if player.y >= WINDOW_HEIGHT:
-            score = "GAME OVER"
+            #print(output)
 
-        draw_window(win, player, platforms, score)
+            # Move Player based on Neural Network Ouput
+            if output[0] == -1.0:
+                player.moveLeft()
+            elif output[0] == 1.0:
+                player.moveRight()
+            else:
+                player.resetMove()
 
-main()
+            # Move Platforms if Player Y is above Jump Threshold
+            if player.y <= JUMP_THRESHOLD:
+                player.y = JUMP_THRESHOLD
+
+                for platform in platforms:
+                    current_height = -round(player.vy)
+                    score += current_height
+
+                    platform.move(current_height)
+
+            # Check if Player is Passive (non-moving)
+            if score > old_score:
+                passive_counter = 0
+                g.fitness += 0.1
+            else:
+                passive_counter += 1
+
+            if passive_counter >= 200:
+                ge[index].fitness -= 5
+                players.pop(index)
+                networks.pop(index)
+                ge.pop(index)
+
+            # Check Player - Platform Collision
+            if player.collide(platforms):
+                player.jump()
+
+            # Player Death
+            if player.y >= WINDOW_HEIGHT:
+                ge[index].fitness -= 5
+                players.pop(index)
+                networks.pop(index)
+                ge.pop(index)
+
+        draw_window(win, players, platforms, score)
+        old_score = score
+
+def run(config_path):
+    config = neat.config.Config(
+        neat.DefaultGenome,
+        neat.DefaultReproduction,
+        neat.DefaultSpeciesSet,
+        neat.DefaultStagnation,
+        config_path
+    )
+
+    p = neat.Population(config)
+    p.add_reporter(neat.StdOutReporter(True))
+    p.add_reporter(neat.StatisticsReporter())
+
+    winner = p.run(main, MAX_GENERATIONS)
+
+if __name__ == "__main__":
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, "config-feedforward.txt")
+    run(config_path)
