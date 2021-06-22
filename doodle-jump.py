@@ -242,9 +242,9 @@ def main(genomes, config):
                 platforms.append(Platform(
                     random.randrange(
                         FIELD_MARGIN,
-                        WINDOW_WIDTH - PLATFORM_SPRITE.get_width() - FIELD_MARGIN
+                        WINDOW_WIDTH - platform.width - FIELD_MARGIN
                     ),
-                    0
+                    -platform.height
                 ))
 
             platform_data.append(platform.x)
@@ -260,10 +260,10 @@ def main(genomes, config):
             output = networks[index].activate(platform_data + player_data)
 
             # Move Player based on Neural Network Ouput
-            if output[0] >= 0.7 and output[1] < 0.7:
-                player.moveLeft()
-            elif output[1] >= 0.7 and output[0] < 0.7:
+            if output[0] >= 0.7:
                 player.moveRight()
+            elif output[0] <= -0.7:
+                player.moveLeft()
             else:
                 player.resetMove()
 
