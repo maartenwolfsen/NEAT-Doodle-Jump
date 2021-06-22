@@ -14,7 +14,7 @@ FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
 GAP_SIZE = 150
 JUMP_THRESHOLD = 210
-MAX_GENERATIONS = 100
+MAX_GENERATIONS = 1000
 MAX_PLATFORMS = 7
 MAX_WHILE = 30
 
@@ -260,12 +260,12 @@ def main(genomes, config):
             output = networks[index].activate(platform_data + player_data)
 
             # Move Player based on Neural Network Ouput
-            if output[0] >= 0.7:
-                player.moveRight()
-            elif output[0] <= -0.7:
+            if output[0] > 0.5:
                 player.moveLeft()
-            else:
-                player.resetMove()
+            elif output[1] > 0.5:
+                player.moveRight()
+            #else:
+                #player.resetMove()
 
             # Move Platforms if Player Y is above Jump Threshold
             if player.y <= JUMP_THRESHOLD:
@@ -274,18 +274,18 @@ def main(genomes, config):
 
             # Check Player - Platform Collision
             if player.collide(platforms) and index < len(ge):
-                ge[index].fitness += 0.05
+                ge[index].fitness += 0.1
                 player.jump()
 
             # Player Death
             if player.y >= WINDOW_HEIGHT and index < len(ge):
-                ge[index].fitness -= 30
+                ge[index].fitness -= 5
                 players.pop(index)
                 networks.pop(index)
                 ge.pop(index)
 
         if current_height > 1 and index < len(ge):
-            ge[index].fitness += 0.1
+            ge[index].fitness += 0.2
 
         if current_height > 5:
             current_height = 5
