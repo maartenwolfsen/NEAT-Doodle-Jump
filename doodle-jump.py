@@ -9,12 +9,12 @@ pygame.font.init()
 
 WINDOW_WIDTH = 480
 WINDOW_HEIGHT = 800
+DEBUG_MODE = False
 FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
-MAX_GAP = 300
+GAP_SIZE = 150
 JUMP_THRESHOLD = 210
-DEBUG_MODE = False
-MAX_GENERATIONS = 500
+MAX_GENERATIONS = 100
 MAX_PLATFORMS = 7
 MAX_WHILE = 30
 
@@ -31,7 +31,6 @@ class Player:
     VELOCITY_X = 4
     VELOCITY_Y = 10
     JUMP_VELOCITY = 0.4
-    MAX_VELOCITY_Y = 10
     JUMP_POWER = 0.08
 
     def __init__(self, x, y):
@@ -64,8 +63,8 @@ class Player:
 
         vy = self.velocity_y + self.JUMP_POWER * self.jump_tick ** 2
 
-        if vy >= self.MAX_VELOCITY_Y:
-            vy = self.MAX_VELOCITY_Y
+        if vy >= self.VELOCITY_Y:
+            vy = self.VELOCITY_Y
 
         if vy < 0:
             vy -= 2
@@ -185,7 +184,7 @@ def draw_window(win, players, platforms, score):
     pygame.display.update()
 
 def generateInitialPlatforms():
-    prev_y = 0
+    prev_y = FIELD_MARGIN
     platforms = []
 
     for i in range(MAX_PLATFORMS):
@@ -193,22 +192,7 @@ def generateInitialPlatforms():
             FIELD_MARGIN,
             WINDOW_WIDTH - PLATFORM_SPRITE.get_width() - FIELD_MARGIN
         )
-        min = prev_y + FIELD_MARGIN
-        y = 0
-        i = 0
-
-        while y < min or y > WINDOW_HEIGHT:
-            i += 1
-
-            if i < MAX_WHILE:
-                y = random.randrange(
-                    min,
-                    min + MAX_GAP
-                )
-            else:
-                y = WINDOW_HEIGHT - FIELD_MARGIN
-                break
-
+        y = prev_y + GAP_SIZE
         prev_y = y
 
         platforms.append(Platform(x, y))
@@ -234,7 +218,6 @@ def main(genomes, config):
     run = True
     score = 0
     old_score = 0
-    passive_counter = 0
 
     while run:
         clock.tick(60)
@@ -276,12 +259,10 @@ def main(genomes, config):
 
             output = networks[index].activate(platform_data + player_data)
 
-            #print(output)
-
             # Move Player based on Neural Network Ouput
-            if output[0] == -1.0:
+            if output[0] >= 0.7 and output[1] < 0.7:
                 player.moveLeft()
-            elif output[0] == 1.0:
+            elif output[1] >= 0.7 and output[0] < 0.7:
                 player.moveRight()
             else:
                 player.resetMove()
@@ -289,36 +270,30 @@ def main(genomes, config):
             # Move Platforms if Player Y is above Jump Threshold
             if player.y <= JUMP_THRESHOLD:
                 player.y = JUMP_THRESHOLD
-
-                for platform in platforms:
-                    current_height = -round(player.vy)
-                    score += current_height
-
-                    platform.move(current_height)
-
-            # Check if Player is Passive (non-moving)
-            if score > old_score:
-                passive_counter = 0
-                g.fitness += 0.1
-            else:
-                passive_counter += 1
-
-            if passive_counter >= 200:
-                ge[index].fitness -= 5
-                players.pop(index)
-                networks.pop(index)
-                ge.pop(index)
+                current_height = -round(player.vy)
 
             # Check Player - Platform Collision
-            if player.collide(platforms):
+            if player.collide(platforms) and index < len(ge):
+                ge[index].fitness += 0.05
                 player.jump()
 
             # Player Death
-            if player.y >= WINDOW_HEIGHT:
-                ge[index].fitness -= 5
+            if player.y >= WINDOW_HEIGHT and index < len(ge):
+                ge[index].fitness -= 30
                 players.pop(index)
                 networks.pop(index)
                 ge.pop(index)
+
+        if current_height > 1 and index < len(ge):
+            ge[index].fitness += 0.1
+
+        if current_height > 5:
+            current_height = 5
+
+        score += current_height
+
+        for platform in platforms:
+            platform.move(current_height)
 
         draw_window(win, players, platforms, score)
         old_score = score
