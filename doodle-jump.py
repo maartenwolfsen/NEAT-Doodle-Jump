@@ -270,14 +270,18 @@ def main(genomes, config):
             player.move()
             player_data.append(player.x)
             player_data.append(player.y)
+            player_data.append(player.velocity_x)
+            player_data.append(player.velocity_y)
 
             output = networks[index].activate(platform_data + player_data)
 
             # Move Player based on Neural Network Ouput
             if output[0] > 0.5:
                 player.moveLeft()
+                ge[index].fitness += 0.05
             elif output[0] < -0.5:
                 player.moveRight()
+                ge[index].fitness += 0.05
 
             # Move Platforms if Player Y is above Jump Threshold
             if player.y <= JUMP_THRESHOLD:
@@ -326,7 +330,7 @@ def run(config_path):
     p.add_reporter(neat.StdOutReporter(True))
     p.add_reporter(neat.StatisticsReporter())
 
-    winner = p.run(main, MAX_GENERATIONS)
+    winner = p.run(main)
 
     with open('winner', 'wb') as f:
         pickle.dump(winner, f)
