@@ -15,6 +15,7 @@ COLLISION_MARGIN = 10
 GAP_SIZE = 150
 JUMP_THRESHOLD = 210
 MAX_GENERATIONS = 1000
+MAX_STAGNATION = 500
 MAX_PLATFORMS = 7
 MAX_WHILE = 30
 SCROLLING_VELOCITY = 5
@@ -46,6 +47,7 @@ class Player:
         self.jump_tick = 0
         self.jump_animation_timer = 30
         self.vy = 0
+        self.stagnation_timer = 0
 
     # Move Player left
     def moveLeft(self):
@@ -131,6 +133,7 @@ class Player:
                 platform.width,
                 platform.height
             )
+            self.prev_platform = platform.id
 
             if player_rect.colliderect(platform_rect):
                 return True
@@ -141,7 +144,8 @@ class Player:
 class Platform:
     VELOCITY = 5
 
-    def __init__(self, x, y):
+    def __init__(self, id, x, y):
+        self.id = id
         self.x = x
         self.y = y
         self.width = PLATFORM_SPRITE.get_width()
@@ -206,7 +210,7 @@ def generateInitialPlatforms():
         y = prev_y + GAP_SIZE
         prev_y = y
 
-        platforms.append(Platform(x, y))
+        platforms.append(Platform(i, x, y))
 
     return platforms
 
@@ -227,10 +231,12 @@ def main(genomes, config):
     win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     clock = pygame.time.Clock()
     platforms = generateInitialPlatforms()
+    platform_i = MAX_PLATFORMS
     current_height = 0
     run = True
     score = 0
     old_score = 0
+    stagnation_timer = 0
 
     while run:
         clock.tick(60)
@@ -245,7 +251,7 @@ def main(genomes, config):
         # Stop Generation when there are no players left
         if len(players) <= 0:
             run = False
-            break
+            return
 
         platform_data = []
 
@@ -254,12 +260,14 @@ def main(genomes, config):
             if platform.y > WINDOW_HEIGHT:
                 platforms.remove(platform)
                 platforms.append(Platform(
+                    platform_i,
                     random.randrange(
                         FIELD_MARGIN,
                         WINDOW_WIDTH - platform.width - FIELD_MARGIN
                     ),
                     -platform.height
                 ))
+                platform_i += 1
 
             platform_data.append(platform.x)
             platform_data.append(platform.y)
@@ -275,13 +283,11 @@ def main(genomes, config):
 
             output = networks[index].activate(platform_data + player_data)
 
-            # Move Player based on Neural Network Ouput
+            # Move Player based on Neural Network Output
             if output[0] > 0.5:
                 player.moveLeft()
-                ge[index].fitness += 0.05
-            elif output[0] < -0.5:
+            elif output[1] > 0.5:
                 player.moveRight()
-                ge[index].fitness += 0.05
 
             # Move Platforms if Player Y is above Jump Threshold
             if player.y <= JUMP_THRESHOLD:
@@ -290,19 +296,28 @@ def main(genomes, config):
 
             # Check Player - Platform Collision
             if player.collide(platforms) and index < len(ge):
-                ge[index].fitness += 0.4
                 player.jump()
 
             # Player Death
             if player.y >= WINDOW_HEIGHT and index < len(ge):
-                ge[index].fitness -= 10
+                ge[index].fitness -= 1
                 players.pop(index)
                 networks.pop(index)
                 ge.pop(index)
 
-        # Increase fitness if player reaches new height
-        if current_height > 1 and index < len(ge):
-            ge[index].fitness += 0.2
+            # Increase fitness if player reaches new height
+            if current_height > 1 and index < len(ge):
+                ge[index].fitness += 0.3
+                player.stagnation_timer = 0
+            else:
+                player.stagnation_timer += 1
+
+            if player.stagnation_timer > MAX_STAGNATION:
+                player.stagnation_timer = 0
+                ge[index].fitness -= 1
+                players.pop(index)
+                networks.pop(index)
+                ge.pop(index)
 
         if current_height > SCROLLING_VELOCITY:
             current_height = SCROLLING_VELOCITY
@@ -338,5 +353,5 @@ def run(config_path):
 # Set Config
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, "config-feedforward.txt")
+    config_path = os.path.join(local_dir, "config")
     run(config_path)
