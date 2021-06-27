@@ -4,6 +4,8 @@ import time
 import os
 import random
 import pickle
+from shapely.geometry import Polygon
+import matplotlib.pyplot as plt
 
 pygame.font.init()
 
@@ -14,11 +16,11 @@ FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
 GAP_SIZE = 150
 JUMP_THRESHOLD = 210
-MAX_GENERATIONS = 1000
 MAX_STAGNATION = 500
 MAX_PLATFORMS = 7
 MAX_WHILE = 30
 SCROLLING_VELOCITY = 5
+RAY_WIDTH = 2
 
 PLAYER_SPRITE_RIGHT = pygame.image.load(os.path.join("sprites", "player.png"))
 PLAYER_SPRITE_LEFT = pygame.transform.flip(PLAYER_SPRITE_RIGHT, True, False)
@@ -48,6 +50,7 @@ class Player:
         self.jump_animation_timer = 30
         self.vy = 0
         self.stagnation_timer = 0
+        self.segments = []
 
     # Move Player left
     def moveLeft(self):
@@ -100,6 +103,7 @@ class Player:
     # Draw Player
     def draw(self, win):
         win.blit(self.image, (self.x, self.y))
+        self.cast_rays()
 
         # In Debug Mode, draw visible collision and coordinates
         if DEBUG_MODE:
@@ -116,6 +120,85 @@ class Player:
             surface.set_alpha(128)
             surface.fill((0, 35, 255))
             win.blit(surface, (self.x + (self.width / 4), self.y + self.height))
+
+            for segment in self.segments:
+                pygame.draw.polygon(win, (75, 50, 255), segment.exterior.coords, 2)
+
+    def cast_rays(self):
+        self.segments = [
+            Polygon([
+                (self.x - 200, self.y + (self.height / 2)),
+                (self.x - 200, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x - 170, self.y + (self.height / 2) - 125),
+                (self.x - 170, self.y + (self.height / 2) - 125 - RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x - 30, self.y - 170),
+                (self.x - 30 - RAY_WIDTH, self.y - 170),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y - 200),
+                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + (self.height / 2)),
+                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + (self.height / 2)),
+                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y - 200)
+            ]),
+            Polygon([
+                (self.x + self.width + 170, self.y + (self.height / 2) - 125),
+                (self.x + self.width + 170, self.y + (self.height / 2) - 125 - RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x + self.width + 30, self.y - 170),
+                (self.x + self.width + 30 - RAY_WIDTH, self.y - 170),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x + self.width + 200, self.y + (self.height / 2)),
+                (self.x + self.width + 200, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x - 170, self.y + (self.height / 2) + 125),
+                (self.x - 170, self.y + (self.height / 2) + 125 - RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x - 30, self.y + self.height + 170),
+                (self.x - 30 - RAY_WIDTH, self.y + self.height + 170),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + self.height + 200),
+                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + (self.height / 2)),
+                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + (self.height / 2)),
+                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + self.height + 200)
+            ]),
+            Polygon([
+                (self.x + self.width + 170, self.y + (self.height / 2) + 125),
+                (self.x + self.width + 170, self.y + (self.height / 2) + 125 - RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ]),
+            Polygon([
+                (self.x + self.width + 30, self.y + self.height + 170),
+                (self.x + self.width + 30 - RAY_WIDTH, self.y + self.height + 170),
+                (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2), self.y + (self.height / 2))
+            ])
+        ]
 
     # Check collision
     def collide(self, platforms):
@@ -140,6 +223,28 @@ class Player:
 
         return False
 
+    def detect_platform(self, platforms):
+        detection = []
+
+        if self.segments:
+            for platform in platforms:
+                if platform.polygon:
+                    value = 0
+
+                    for segment in self.segments:
+                        if segment.intersects(platform.polygon):
+                            value = 1
+                            break
+
+                    detection.append(value)
+                else:
+                    detection.append(0)
+        else:
+            return [0, 0, 0, 0, 0, 0, 0]
+
+        return detection
+
+
 # Platform Class
 class Platform:
     VELOCITY = 5
@@ -154,6 +259,7 @@ class Platform:
             FIELD_MARGIN,
             WINDOW_WIDTH - self.width - FIELD_MARGIN
         )
+        self.polygon = False
 
     # Move down (scroll)
     def move(self, y):
@@ -163,8 +269,16 @@ class Platform:
     def draw(self, win):
         win.blit(PLATFORM_SPRITE, (self.x, self.y))
 
+        self.polygon = Polygon([
+            (self.x, self.y),
+            (self.x + self.width, self.y),
+            (self.x + self.width, self.y + self.height),
+            (self.x, self.y + self.height)
+        ])
+
         # In Debug Mode, draw visible collision and coordinates
         if DEBUG_MODE:
+            # X and Y values
             win.blit(
                 DEBUG_FONT.render(
                     "Y: " + str(round(self.y)) + "; X: " + str(round(self.x)),
@@ -174,10 +288,14 @@ class Platform:
                 (self.x, self.y)
             )
 
+            # Collision area
             surface = pygame.Surface((self.width, self.height))
             surface.set_alpha(128)
             surface.fill((255, 0, 25))
             win.blit(surface, (self.x, self.y))
+
+            # Raycast area
+            pygame.draw.polygon(win, (75, 50, 255), self.polygon.exterior.coords, 2)
 
 # Draw objects in window
 def draw_window(win, players, platforms, score):
@@ -269,24 +387,22 @@ def main(genomes, config):
                 ))
                 platform_i += 1
 
-            platform_data.append(platform.x)
-            platform_data.append(platform.y)
-
         for index, player in enumerate(players):
-            player_data = []
-
             player.move()
-            player_data.append(player.x)
-            player_data.append(player.y)
-            player_data.append(player.velocity_x)
-            player_data.append(player.velocity_y)
 
-            output = networks[index].activate(platform_data + player_data)
+            input_data = player.detect_platform(platforms)
+            input_data.append((player.vy / 10) if player.vy > 0 else 0)
+            input_data.append(((player.vy / 10) if player.vy > -10 else -10) if player.vy < 0 else 0)
+            input_data.append(1 if player.velocity_x > 0 else 0)
+            input_data.append(1 if player.velocity_x < 0 else 0)
+
+            output = networks[index].activate(input_data)
+            action = output.index(max(output))
 
             # Move Player based on Neural Network Output
-            if output[0] > 0.5:
+            if action == 0:
                 player.moveLeft()
-            elif output[1] > 0.5:
+            elif action == 1:
                 player.moveRight()
 
             # Move Platforms if Player Y is above Jump Threshold
@@ -300,21 +416,19 @@ def main(genomes, config):
 
             # Player Death
             if player.y >= WINDOW_HEIGHT and index < len(ge):
-                ge[index].fitness -= 1
                 players.pop(index)
                 networks.pop(index)
                 ge.pop(index)
 
             # Increase fitness if player reaches new height
             if current_height > 1 and index < len(ge):
-                ge[index].fitness += 0.3
+                ge[index].fitness += 0.1
                 player.stagnation_timer = 0
             else:
                 player.stagnation_timer += 1
 
             if player.stagnation_timer > MAX_STAGNATION:
                 player.stagnation_timer = 0
-                ge[index].fitness -= 1
                 players.pop(index)
                 networks.pop(index)
                 ge.pop(index)

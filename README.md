@@ -7,4 +7,5 @@ Install the packages via Pip:
 ```
 pip install pygame
 pip install neat
+pip install numpy
 ```
