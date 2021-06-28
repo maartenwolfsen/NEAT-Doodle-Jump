@@ -14,10 +14,10 @@ WINDOW_HEIGHT = 800
 DEBUG_MODE = False
 FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
-GAP_SIZE = 150
+GAP_SIZE = 120
 JUMP_THRESHOLD = 210
 MAX_STAGNATION = 500
-MAX_PLATFORMS = 7
+MAX_PLATFORMS = 8
 MAX_WHILE = 30
 SCROLLING_VELOCITY = 5
 RAY_WIDTH = 2
@@ -50,7 +50,9 @@ class Player:
         self.jump_animation_timer = 30
         self.vy = 0
         self.stagnation_timer = 0
-        self.segments = []
+        self.rays = []
+        self.rays_collided = []
+        self.cast_rays()
 
     # Move Player left
     def moveLeft(self):
@@ -121,11 +123,16 @@ class Player:
             surface.fill((0, 35, 255))
             win.blit(surface, (self.x + (self.width / 4), self.y + self.height))
 
-            for segment in self.segments:
-                pygame.draw.polygon(win, (75, 50, 255), segment.exterior.coords, 2)
+            for i, ray in enumerate(self.rays):
+                color = (75, 50, 255)
+
+                if self.rays_collided and 0 <= i < len(self.rays_collided) and self.rays_collided[i] == 1:
+                    color = (35, 255, 0)
+
+                pygame.draw.polygon(win, color, ray.exterior.coords, 2)
 
     def cast_rays(self):
-        self.segments = [
+        self.rays = [
             Polygon([
                 (self.x - 200, self.y + (self.height / 2)),
                 (self.x - 200, self.y + (self.height / 2) + RAY_WIDTH),
@@ -224,25 +231,25 @@ class Player:
         return False
 
     def detect_platform(self, platforms):
-        detection = []
+        self.rays_collided = []
 
-        if self.segments:
-            for platform in platforms:
-                if platform.polygon:
-                    value = 0
+        if self.rays:
+            for ray in self.rays:
+                cast = False
 
-                    for segment in self.segments:
-                        if segment.intersects(platform.polygon):
-                            value = 1
-                            break
+                for i, platform in enumerate(platforms):
+                    if platform.polygon and ray.intersects(platform.polygon) and not cast:
+                        self.rays_collided.append(1)
+                        cast = True
 
-                    detection.append(value)
-                else:
-                    detection.append(0)
+                if not cast:
+                    self.rays_collided.append(0)
         else:
-            return [0, 0, 0, 0, 0, 0, 0]
+            self.rays_collided = [0, 0, 0, 0, 0, 0, 0]
 
-        return detection
+            return self.rays_collided
+
+        return self.rays_collided
 
 
 # Platform Class
@@ -387,12 +394,15 @@ def main(genomes, config):
                 ))
                 platform_i += 1
 
+        current_height = 0
+
         for index, player in enumerate(players):
             player.move()
 
+            # Determine action based on input
             input_data = player.detect_platform(platforms)
-            input_data.append((player.vy / 10) if player.vy > 0 else 0)
-            input_data.append(((player.vy / 10) if player.vy > -10 else -10) if player.vy < 0 else 0)
+            input_data.append(1 if player.vy > 0 else 0)
+            input_data.append(1 if player.vy < 0 else 0)
             input_data.append(1 if player.velocity_x > 0 else 0)
             input_data.append(1 if player.velocity_x < 0 else 0)
 
@@ -406,9 +416,14 @@ def main(genomes, config):
                 player.moveRight()
 
             # Move Platforms if Player Y is above Jump Threshold
+
+            prev_height = current_height
+
             if player.y <= JUMP_THRESHOLD:
                 player.y = JUMP_THRESHOLD
-                current_height = -round(player.vy)
+
+                if -round(player.vy) > prev_height:
+                    current_height = -round(player.vy)
 
             # Check Player - Platform Collision
             if player.collide(platforms) and index < len(ge):
