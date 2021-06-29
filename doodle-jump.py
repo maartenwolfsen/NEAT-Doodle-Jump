@@ -11,13 +11,13 @@ pygame.font.init()
 
 WINDOW_WIDTH = 480
 WINDOW_HEIGHT = 800
-DEBUG_MODE = False
+DEBUG_MODE = True
 FIELD_MARGIN = 5
 COLLISION_MARGIN = 10
-GAP_SIZE = 120
+GAP_SIZE = 150
 JUMP_THRESHOLD = 210
 MAX_STAGNATION = 500
-MAX_PLATFORMS = 8
+MAX_PLATFORMS = 7
 MAX_WHILE = 30
 SCROLLING_VELOCITY = 5
 RAY_WIDTH = 2
@@ -37,18 +37,19 @@ class Player:
     VELOCITY_Y = 10
     JUMP_VELOCITY = 0.4
     JUMP_POWER = 0.08
+    RAY_SIZE = 200
 
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.velocity_x = 0
         self.velocity_y = 0
+        self.vy = 0
         self.image = PLAYER_SPRITE_RIGHT
         self.height = self.image.get_height()
         self.width = self.image.get_width()
         self.jump_tick = 0
         self.jump_animation_timer = 30
-        self.vy = 0
         self.stagnation_timer = 0
         self.rays = []
         self.rays_collided = []
@@ -123,89 +124,167 @@ class Player:
             surface.fill((0, 35, 255))
             win.blit(surface, (self.x + (self.width / 4), self.y + self.height))
 
-            for i, ray in enumerate(self.rays):
-                color = (75, 50, 255)
+            for i, rays in enumerate(self.rays):
+                for ray in rays:
+                    color = (75, 50, 255)
 
-                if self.rays_collided and 0 <= i < len(self.rays_collided) and self.rays_collided[i] == 1:
-                    color = (35, 255, 0)
+                    if self.rays_collided and 0 <= i < len(self.rays_collided) and self.rays_collided[i] == 1:
+                        color = (35, 255, 0)
 
-                pygame.draw.polygon(win, color, ray.exterior.coords, 2)
+                    pygame.draw.polygon(win, color, ray.exterior.coords, 2)
 
+    # Cast rays to detect platforms
     def cast_rays(self):
         self.rays = [
-            Polygon([
-                (self.x - 200, self.y + (self.height / 2)),
-                (self.x - 200, self.y + (self.height / 2) + RAY_WIDTH),
+            # Left
+            [Polygon([
+                (self.x - self.RAY_SIZE, self.y + (self.height / 2)),
+                (self.x - self.RAY_SIZE, self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x - 170, self.y + (self.height / 2) - 125),
-                (self.x - 170, self.y + (self.height / 2) - 125 - RAY_WIDTH),
+            ])],
+            # Left left top
+            [Polygon([
+                (self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) - (self.RAY_SIZE * 0.65)),
+                (self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) - (self.RAY_SIZE * 0.65) - RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x - 30, self.y - 170),
-                (self.x - 30 - RAY_WIDTH, self.y - 170),
+            ])],
+            # Left top top
+            [Polygon([
+                (self.x - (self.RAY_SIZE * 0.15), self.y - (self.RAY_SIZE * 0.85)),
+                (self.x - (self.RAY_SIZE * 0.15) - RAY_WIDTH, self.y - (self.RAY_SIZE * 0.85)),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y - 200),
+            ])],
+            # Top
+            [Polygon([
+                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y - self.RAY_SIZE),
                 (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + (self.height / 2)),
                 (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + (self.height / 2)),
-                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y - 200)
-            ]),
-            Polygon([
-                (self.x + self.width + 170, self.y + (self.height / 2) - 125),
-                (self.x + self.width + 170, self.y + (self.height / 2) - 125 - RAY_WIDTH),
+                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y - self.RAY_SIZE)
+            ])],
+            # Top top right
+            [Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.15), self.y - (self.RAY_SIZE * 0.85)),
+                (self.x + self.width + (self.RAY_SIZE * 0.15) - RAY_WIDTH, self.y - (self.RAY_SIZE * 0.85)),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x + self.width + 30, self.y - 170),
-                (self.x + self.width + 30 - RAY_WIDTH, self.y - 170),
+            ])],
+            # Top right right
+            [Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.85), self.y + (self.height / 2) - (self.RAY_SIZE * 0.65)),
+                (self.x + self.width + (self.RAY_SIZE * 0.85), self.y + (self.height / 2) - (self.RAY_SIZE * 0.65) - RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x + self.width + 200, self.y + (self.height / 2)),
-                (self.x + self.width + 200, self.y + (self.height / 2) + RAY_WIDTH),
+            ])],
+            # Right
+            [Polygon([
+                (self.x + self.width + self.RAY_SIZE, self.y + (self.height / 2)),
+                (self.x + self.width + self.RAY_SIZE, self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x - 170, self.y + (self.height / 2) + 125),
-                (self.x - 170, self.y + (self.height / 2) + 125 - RAY_WIDTH),
+            ])],
+            # Bottom left left
+            [Polygon([
+                (self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) + (self.RAY_SIZE * 0.65)),
+                (self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) + (self.RAY_SIZE * 0.65) - RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x - 30, self.y + self.height + 170),
-                (self.x - 30 - RAY_WIDTH, self.y + self.height + 170),
+            ])],
+            # Bottom bottom left
+            [Polygon([
+                (self.x - (self.RAY_SIZE * 0.15), self.y + self.height + (self.RAY_SIZE * 0.85)),
+                (self.x - (self.RAY_SIZE * 0.15) - RAY_WIDTH, self.y + self.height + (self.RAY_SIZE * 0.85)),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + self.height + 200),
+            ])],
+            # Bottom
+            [Polygon([
+                (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + self.height + self.RAY_SIZE),
                 (self.x + (self.width / 2) - (RAY_WIDTH / 2), self.y + (self.height / 2)),
                 (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + (self.height / 2)),
-                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + self.height + 200)
-            ]),
-            Polygon([
-                (self.x + self.width + 170, self.y + (self.height / 2) + 125),
-                (self.x + self.width + 170, self.y + (self.height / 2) + 125 - RAY_WIDTH),
+                (self.x + (self.width / 2) + (RAY_WIDTH / 2), self.y + self.height + self.RAY_SIZE)
+            ])],
+            # Bottom bottom right
+            [Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.15), self.y + self.height + (self.RAY_SIZE * 0.85)),
+                (self.x + self.width + (self.RAY_SIZE * 0.15) - RAY_WIDTH, self.y + self.height + (self.RAY_SIZE * 0.85)),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ]),
-            Polygon([
-                (self.x + self.width + 30, self.y + self.height + 170),
-                (self.x + self.width + 30 - RAY_WIDTH, self.y + self.height + 170),
+            ])],
+            # Bottom right right
+            [Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.85), self.y + (self.height / 2) + (self.RAY_SIZE * 0.65)),
+                (self.x + self.width + (self.RAY_SIZE * 0.85), self.y + (self.height / 2) + (self.RAY_SIZE * 0.65) - RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
                 (self.x + (self.width / 2), self.y + (self.height / 2))
-            ])
+            ])]
         ]
+
+        # Mirror rays when crossing window borders
+        if self.x < self.RAY_SIZE:
+            self.rays[0].append(Polygon([
+                (WINDOW_WIDTH + self.x - self.RAY_SIZE, self.y + (self.height / 2)),
+                (WINDOW_WIDTH + self.x - self.RAY_SIZE, self.y + (self.height / 2) + RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2))
+            ]))
+            self.rays[1].append(Polygon([
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) - (self.RAY_SIZE * 0.65)),
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) - (self.RAY_SIZE * 0.65) - RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2))
+            ]))
+            self.rays[2].append(Polygon([
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.15), self.y - (self.RAY_SIZE * 0.85)),
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.15) - RAY_WIDTH, self.y - (self.RAY_SIZE * 0.85)),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2))
+            ]))
+            self.rays[7].append(Polygon([
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) + (self.RAY_SIZE * 0.65)),
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.85), self.y + (self.height / 2) + (self.RAY_SIZE * 0.65) - RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2))
+            ]))
+            self.rays[8].append(Polygon([
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.15), self.y + self.height + (self.RAY_SIZE * 0.85)),
+                (WINDOW_WIDTH + self.x - (self.RAY_SIZE * 0.15) - RAY_WIDTH, self.y + self.height + (self.RAY_SIZE * 0.85)),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2) + RAY_WIDTH),
+                (WINDOW_WIDTH + self.x + (self.width / 2), self.y + (self.height / 2))
+            ]))
+        elif self.x + self.width > WINDOW_WIDTH - self.RAY_SIZE:
+            self.rays[4].append(Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.15) - WINDOW_WIDTH - self.width, self.y - (self.RAY_SIZE * 0.85)),
+                (self.x + self.width + (self.RAY_SIZE * 0.15) - RAY_WIDTH - WINDOW_WIDTH - self.width, self.y - (self.RAY_SIZE * 0.85)),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2))
+            ]))
+            self.rays[5].append(Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.85) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) - (self.RAY_SIZE * 0.65)),
+                (self.x + self.width + (self.RAY_SIZE * 0.85) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) - (self.RAY_SIZE * 0.65) - RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2))
+            ]))
+            self.rays[6].append(Polygon([
+                (self.x + self.width + self.RAY_SIZE - WINDOW_WIDTH - self.width, self.y + (self.height / 2)),
+                (self.x + self.width + self.RAY_SIZE - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2))
+            ]))
+            self.rays[10].append(Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.15) - WINDOW_WIDTH - self.width, self.y + self.height + (self.RAY_SIZE * 0.85)),
+                (self.x + self.width + (self.RAY_SIZE * 0.15) - RAY_WIDTH - WINDOW_WIDTH - self.width, self.y + self.height + (self.RAY_SIZE * 0.85)),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2))
+            ]))
+            self.rays[11].append(Polygon([
+                (self.x + self.width + (self.RAY_SIZE * 0.85) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + (self.RAY_SIZE * 0.65)),
+                (self.x + self.width + (self.RAY_SIZE * 0.85) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + (self.RAY_SIZE * 0.65) - RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2) + RAY_WIDTH),
+                (self.x + (self.width / 2) - WINDOW_WIDTH - self.width, self.y + (self.height / 2))
+            ]))
 
     # Check collision
     def collide(self, platforms):
@@ -234,13 +313,14 @@ class Player:
         self.rays_collided = []
 
         if self.rays:
-            for ray in self.rays:
+            for rays in self.rays:
                 cast = False
 
                 for i, platform in enumerate(platforms):
-                    if platform.polygon and ray.intersects(platform.polygon) and not cast:
-                        self.rays_collided.append(1)
-                        cast = True
+                    for ray in rays:
+                        if platform.polygon and ray.intersects(platform.polygon) and not cast:
+                            self.rays_collided.append(1)
+                            cast = True
 
                 if not cast:
                     self.rays_collided.append(0)
@@ -360,8 +440,6 @@ def main(genomes, config):
     current_height = 0
     run = True
     score = 0
-    old_score = 0
-    stagnation_timer = 0
 
     while run:
         clock.tick(60)
@@ -458,7 +536,6 @@ def main(genomes, config):
             platform.move(current_height)
 
         draw_window(win, players, platforms, score)
-        old_score = score
 
 # Run AI
 def run(config_path):
