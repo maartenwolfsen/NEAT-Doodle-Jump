@@ -309,6 +309,7 @@ class Player:
 
         return False
 
+    # Detect platform when intersected with cast ray
     def detect_platform(self, platforms):
         self.rays_collided = []
 
@@ -494,7 +495,6 @@ def main(genomes, config):
                 player.moveRight()
 
             # Move Platforms if Player Y is above Jump Threshold
-
             prev_height = current_height
 
             if player.y <= JUMP_THRESHOLD:
@@ -520,6 +520,7 @@ def main(genomes, config):
             else:
                 player.stagnation_timer += 1
 
+            # Keep track of stagnation and remove genome when stagnation is too high
             if player.stagnation_timer > MAX_STAGNATION:
                 player.stagnation_timer = 0
                 players.pop(index)
