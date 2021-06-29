@@ -7,5 +7,6 @@ Install the packages via Pip:
 ```
 pip install pygame
 pip install neat
-pip install numpy
+pip install shapely
+pip install matplotlib
 ```
