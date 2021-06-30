@@ -557,6 +557,23 @@ def run(config_path):
     with open('winner', 'wb') as f:
         pickle.dump(winner, f)
 
+def run_genome(config_path, genome_path="winner"):
+    # Load requried NEAT config
+    config = neat.config.Config(
+        neat.DefaultGenome,
+        neat.DefaultReproduction,
+        neat.DefaultSpeciesSet,
+        neat.DefaultStagnation,
+        config_path
+    )
+
+    with open(genome_path, "rb") as f:
+        genome = pickle.load(f)
+
+    genomes = [(1, genome)]
+
+    run(genomes, config)
+
 # Set Config
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
