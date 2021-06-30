@@ -558,7 +558,7 @@ def run(config_path):
         pickle.dump(winner, f)
 
 # Run selected genome
-def run_genome(config_path, genome_path="winner"):
+def run_genome(config_path, genome_path = "winner"):
     config = neat.config.Config(
         neat.DefaultGenome,
         neat.DefaultReproduction,
