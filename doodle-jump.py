@@ -5,7 +5,6 @@ import os
 import random
 import pickle
 from shapely.geometry import Polygon
-import matplotlib.pyplot as plt
 
 pygame.font.init()
 
